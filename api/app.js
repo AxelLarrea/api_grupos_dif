@@ -12,7 +12,7 @@ const redisClient = redis.createClient(6379, "api_grupos_dif_db_1");
 // Subscriptor
 const sub = redis.createClient(6379, "api_grupos_dif_db_1");
 
-/* const sub2 = redis.createClient(6379, "api_grupos_dif_db_1"); */
+const sub2 = redis.createClient(6379, "api_grupos_dif_db_1");
 
 app.set('port',port);
 
@@ -39,15 +39,20 @@ sub.on('error', function(err){
 });
 
 sub.on('message', (channel, message) => {
-    console.log(`Received message from ${channel} channel.`);
+    console.log(`Received message from ${channel} channel, sub1.`);
+    console.log(message);
+});
+
+sub2.on('message', (channel, message) => {
+    console.log(`Received message from ${channel} channel, sub2.`);
     console.log(message);
 });
 
 // Subscripciones a canales default
 
-/* sub2.subscribe('Becas', (message, channel) => {
+sub2.subscribe('Becas', (message, channel) => {
     console.log('Canal: ', channel);
-}); */
+});
 
 sub.subscribe('Mesas de exámen', (message, channel) => {
     console.log('Canal: ', channel);
@@ -74,19 +79,12 @@ sub.subscribe('Profesorados', (message, channel) => {
 });
 
 
-/* subscriber.on(“message”, function (channel, message) {
-    console.log(“Message: “ + message + “ on channel: “ + channel + “ is arrive!”);
-});
 
+app.post('/subscribir', (req, res) =>{
+    try{
+        let {canal}=req.body;
 
-}); */
-
-
-app.post('/subscribir/:canal', (req, res) =>{
-    try {
-        let {canal}=req.params;
-
-        sub.subscribe(`${canal}`, (message, channel) => {
+        sub2.subscribe(`${canal}`, (message, channel) => {
             console.log('Canal: ', channel);
             const result = channel;
             res.json(result);
@@ -109,7 +107,7 @@ app.post('/desubscribir/:canal', (req, res) =>{
     try {
         let {canal}=req.params;
 
-        sub.unsubscribe(`${canal}`, (message, channel) => {
+        sub2.unsubscribe(`${canal}`, (message, channel) => {
             console.log('Canal: ', channel);
             const result = channel;
             res.json(result);
@@ -121,17 +119,17 @@ app.post('/desubscribir/:canal', (req, res) =>{
     ;}
 });
 
-app.post('/publicar/:canal', (req, res) =>{
+app.post('/publicar', (req, res) =>{
     try {
-        let {message}=req.body;
-        let {canal}=req.params;
+        let {mensaje}=req.body;
+        let {canal}=req.body;
         
-        redisClient.publish(`${canal}`, `${message}`, (err, message) => {
+        redisClient.publish(`${canal}`, `${mensaje}`, (err, message) => {
             if(err){
                 console.log(err);
             }else {
-                const result = message;
-                res.json(result);
+                const result = {mensaje, canal};
+                res.json(result);1
             };
         });
 
@@ -166,7 +164,7 @@ app.get('/activoscanal/:canal', (req, res) => {
         redisClient.pubsub('numsub', `${canal}`, (err, reply) => {
             if(err){
                 console.log('Error: ', err);
-            }else {
+            } else {
                 console.log(reply);
                 const result = reply;
                 res.json(result);
